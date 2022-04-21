@@ -14,6 +14,7 @@ const { Client } = require("@notionhq/client");
 require("dotenv").config();
 // Render Canvas description as text for the database
 const { htmlToText } = require("html-to-text");
+const axios = require("axios");
 //#endregion imports
 
 //#region parker variables
@@ -63,6 +64,25 @@ let parkersReq = [
 ];
 //#endregion end parker variables
 
+exports.updateAtEight = functions.pubsub
+  .schedule("0 8 * * *")
+  .timeZone("America/Chicago")
+  .onRun((context) => {
+    RunForPeople();
+
+    return console.log(
+      "Script Complete!-----------------------------------------------------------------------------------"
+    );
+  });
+
+function RunForPeople() {
+  parkersReq.forEach((req) => {
+    AssignmentsToDB(req, parker_auth_header);
+  });
+
+  return true;
+}
+
 parkersReq.forEach((req) => {
   AssignmentsToDB(req, parker_auth_header);
 });
@@ -111,32 +131,20 @@ async function AssignmentsToDB(req, auth_header) {
   const assignments = await canvas.get("courses/" + req.cid + "/assignments");
   let errors = [];
 
-  for (let assn of assignments) {
+  for await (let assn of assignments) {
     // Make a description with no HTML
     good_description = htmlToText(assn.description);
 
     try {
-      const isDuplicate = await checkDuplicates(db_id, notion, assn);
-
-      // // checks so that duplicates aren't created
-      // const response = await notion.databases.query({
-      //   database_id: db_id,
-      //   page_size: 1000000, // make sure it gets all assignments
-      // });
-      // let results = response["results"];
-
-      // let assignments = [];
-      // results.forEach((result) => {
-      //   let assignmentName = result.properties.Name.title[0]
-      //     ? result.properties.Name.title[0].text.content
-      //     : "";
-      //   console.log(result.properties);
-      //   assignments.push(assignmentName);
-      // });
+      let isDuplicate = await checkDuplicates(db_id, notion, assn, auth_header);
 
       if (isDuplicate) {
-        console.log("Already in database");
+        // console.log("Already in database");
       } else {
+        console.log(
+          "Adding.............................................................................",
+          assn.name
+        );
         //   Create a page under the database.
         await notion.pages.create({
           parent: {
@@ -207,12 +215,22 @@ async function AssignmentsToDB(req, auth_header) {
               url: assn.html_url,
             },
             Status: {
-              select: assn.has_submitted_submissions
-                ? { name: "Complete", color: "green" }
-                : { name: "Not Started", color: "red" },
+              select: { name: "Not Started", color: "red" },
             },
+
+            // commented out for now because Canvas api is sometimes wrong for if something is done or not
+            // Status: {
+            //   select: assn.has_submitted_submissions
+            //     ? { name: "Complete", color: "green" }
+            //     : { name: "Not Started", color: "red" },
+            // },
           },
         });
+
+        console.log(
+          "Addition Complete..............................................",
+          assn.name
+        );
       }
     } catch (e) {
       console.log(e);
@@ -231,39 +249,71 @@ async function AssignmentsToDB(req, auth_header) {
     }
   }
 
-  console.log("Insertion complete");
+  // console.log("Insertion complete");
+  return true;
 }
 
-async function checkDuplicates(db_id, notion, assn) {
+function checkDuplicates(db_id, notion, assn, auth_header) {
   // checks so that duplicates aren't created
-  let assignments = {};
-  await notion.databases
+  return notion.databases
     .query({
       database_id: db_id,
-      page_size: 1000000, // make sure it gets all assignments
+      filter: {
+        and: [
+          {
+            property: "Name",
+
+            text: {
+              equals: assn.name,
+            },
+          },
+        ],
+      },
     })
     .then((response) => {
       let results = response["results"];
+      let isDuplicate = false;
+      let blockId;
 
-      results.forEach((result) => {
-        let assignmentName = result.properties.Name.title[0]
-          ? result.properties.Name.title[0].text.content
-          : "";
+      if (results.length > 0) {
+        return true;
+      } else {
+        console.log(results);
+        return false;
+      }
 
-        console.log(result.properties.Status.select.name);
-        let doneWords = result.properties.Status.select.name;
-        let isAssDone = doneWords === "Complete" ? true : false;
-        assignments[assignmentName] = {
-          isDone: isAssDone,
-        };
-      });
+      // results.forEach((result) => {
+      //   let assignmentName = result.properties.Name.title[0]
+      //     ? result.properties.Name.title[0].plain_text
+      //     : "";
 
-      console.log(assn.has_submitted_submissions);
-      console.log(assignments);
+      //   console.log(assignmentName);
+
+      //   if (assignmentName === assn.name) {
+      //     isDuplicate = true;
+      //   }
+      // });
+
+      // console.log(isDuplicate);
+
+      // if (!isDuplicate) {
+      //   results.forEach((result) => {
+      //     let assignmentName = result.properties.Name.title[0]
+      //       ? result.properties.Name.title[0].plain_text
+      //       : "";
+
+      //     console.log(assignmentName);
+      //   });
+      // }
+
+      // return isDuplicate;
     })
     .catch((e) => {
       console.log(e);
+      return true;
     });
 
-  return assignments[assn.name] !== {};
+  // console.log(isDuplicate);
+
+  // return isDuplicate;
 }
