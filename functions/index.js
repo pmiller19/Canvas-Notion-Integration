@@ -2,19 +2,12 @@ const functions = require("firebase-functions");
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
-//
-// exports.helloWorld = functions.https.onRequest((request, response) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
 
 //#region imports
 const c = require("canvas-lms-api");
 const { Client } = require("@notionhq/client");
-require("dotenv").config();
 // Render Canvas description as text for the database
 const { htmlToText } = require("html-to-text");
-const axios = require("axios");
 //#endregion imports
 
 //#region parker variables
@@ -23,41 +16,51 @@ const parker_auth_header = "secret_ckmON7BF6UIPVCcK6kMayTAe0E0uFf9qmeO4I7t7jFk";
 let parkersReq = [
   {
     cdom: "canvas.unl.edu",
-    cid: "123464", // Autonoma
+    cid: "136531", // Communication Networks
     notionUri:
       "https://www.notion.so/202d2b74596448dea5993eb13350e909?v=4961a5a1a56e42caa8fe2f963594ae4c",
     ctoken:
-      "6507~ClQvg5c5BnDZ3dPBpeJR8mmXz1BhWlfv90Q4r8zGk9YAslngivVU6hIwuCABCMyU",
+      "6507~px0JG9P3oGj8dGu3vF1bmgBP7gQV9enihn3ftpmDcYA87jeYFENiGvm64h2Iyaeo",
     notion_token:
       "96bccfc109d09018a78912c7a21292706967f3c66ca4444cdd6383c922628be37e6b6640b48857f23cfb57b6b29878b72f08e3935c4de65ec3029ef91f22770f28659d6418383006114f128e0c5e",
   },
   {
     cdom: "canvas.unl.edu",
-    cid: "127715", // Business Law
+    cid: "136460", // DS Senior Year
     notionUri:
       "https://www.notion.so/202d2b74596448dea5993eb13350e909?v=4961a5a1a56e42caa8fe2f963594ae4c",
     ctoken:
-      "6507~ClQvg5c5BnDZ3dPBpeJR8mmXz1BhWlfv90Q4r8zGk9YAslngivVU6hIwuCABCMyU",
+      "6507~px0JG9P3oGj8dGu3vF1bmgBP7gQV9enihn3ftpmDcYA87jeYFENiGvm64h2Iyaeo",
     notion_token:
       "96bccfc109d09018a78912c7a21292706967f3c66ca4444cdd6383c922628be37e6b6640b48857f23cfb57b6b29878b72f08e3935c4de65ec3029ef91f22770f28659d6418383006114f128e0c5e",
   },
   {
     cdom: "canvas.unl.edu",
-    cid: "127711", // Data & Models III
+    cid: "136521", // Molecular and Nano Communication
     notionUri:
       "https://www.notion.so/202d2b74596448dea5993eb13350e909?v=4961a5a1a56e42caa8fe2f963594ae4c",
     ctoken:
-      "6507~ClQvg5c5BnDZ3dPBpeJR8mmXz1BhWlfv90Q4r8zGk9YAslngivVU6hIwuCABCMyU",
+      "6507~px0JG9P3oGj8dGu3vF1bmgBP7gQV9enihn3ftpmDcYA87jeYFENiGvm64h2Iyaeo",
     notion_token:
       "96bccfc109d09018a78912c7a21292706967f3c66ca4444cdd6383c922628be37e6b6640b48857f23cfb57b6b29878b72f08e3935c4de65ec3029ef91f22770f28659d6418383006114f128e0c5e",
   },
   {
     cdom: "canvas.unl.edu",
-    cid: "123447", // DS
+    cid: "141245", // Raik 40
     notionUri:
       "https://www.notion.so/202d2b74596448dea5993eb13350e909?v=4961a5a1a56e42caa8fe2f963594ae4c",
     ctoken:
-      "6507~ClQvg5c5BnDZ3dPBpeJR8mmXz1BhWlfv90Q4r8zGk9YAslngivVU6hIwuCABCMyU",
+      "6507~px0JG9P3oGj8dGu3vF1bmgBP7gQV9enihn3ftpmDcYA87jeYFENiGvm64h2Iyaeo",
+    notion_token:
+      "96bccfc109d09018a78912c7a21292706967f3c66ca4444cdd6383c922628be37e6b6640b48857f23cfb57b6b29878b72f08e3935c4de65ec3029ef91f22770f28659d6418383006114f128e0c5e",
+  },
+  {
+    cdom: "canvas.unl.edu",
+    cid: "136592", // Special Topics Cybersecurity
+    notionUri:
+      "https://www.notion.so/202d2b74596448dea5993eb13350e909?v=4961a5a1a56e42caa8fe2f963594ae4c",
+    ctoken:
+      "6507~px0JG9P3oGj8dGu3vF1bmgBP7gQV9enihn3ftpmDcYA87jeYFENiGvm64h2Iyaeo",
     notion_token:
       "96bccfc109d09018a78912c7a21292706967f3c66ca4444cdd6383c922628be37e6b6640b48857f23cfb57b6b29878b72f08e3935c4de65ec3029ef91f22770f28659d6418383006114f128e0c5e",
   },
@@ -66,6 +69,17 @@ let parkersReq = [
 
 exports.updateAtEight = functions.pubsub
   .schedule("0 8 * * *")
+  .timeZone("America/Chicago")
+  .onRun((context) => {
+    RunForPeople();
+
+    return console.log(
+      "Script Complete!-----------------------------------------------------------------------------------"
+    );
+  });
+
+exports.testing = functions.pubsub
+  .schedule("1 * * * *")
   .timeZone("America/Chicago")
   .onRun((context) => {
     RunForPeople();
