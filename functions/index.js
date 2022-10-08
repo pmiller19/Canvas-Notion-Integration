@@ -201,7 +201,6 @@ async function AssignmentsToDB(req, auth_header) {
               ],
             },
 
-            // Not sure how to get this from the API, for now just get the user to change it.
             Done: {
               checkbox: assn.has_submitted_submissions || false,
             },
@@ -231,13 +230,6 @@ async function AssignmentsToDB(req, auth_header) {
             Status: {
               select: { name: "Not Started", color: "red" },
             },
-
-            // commented out for now because Canvas api is sometimes wrong for if something is done or not
-            // Status: {
-            //   select: assn.has_submitted_submissions
-            //     ? { name: "Complete", color: "green" }
-            //     : { name: "Not Started", color: "red" },
-            // },
           },
         });
 
@@ -286,48 +278,15 @@ function checkDuplicates(db_id, notion, assn, auth_header) {
     })
     .then((response) => {
       let results = response["results"];
-      let isDuplicate = false;
-      let blockId;
-
       if (results.length > 0) {
         return true;
       } else {
         console.log(results);
         return false;
       }
-
-      // results.forEach((result) => {
-      //   let assignmentName = result.properties.Name.title[0]
-      //     ? result.properties.Name.title[0].plain_text
-      //     : "";
-
-      //   console.log(assignmentName);
-
-      //   if (assignmentName === assn.name) {
-      //     isDuplicate = true;
-      //   }
-      // });
-
-      // console.log(isDuplicate);
-
-      // if (!isDuplicate) {
-      //   results.forEach((result) => {
-      //     let assignmentName = result.properties.Name.title[0]
-      //       ? result.properties.Name.title[0].plain_text
-      //       : "";
-
-      //     console.log(assignmentName);
-      //   });
-      // }
-
-      // return isDuplicate;
     })
     .catch((e) => {
       console.log(e);
       return true;
     });
-
-  // console.log(isDuplicate);
-
-  // return isDuplicate;
 }
